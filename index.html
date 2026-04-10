@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mount Material Optimizer</title>
+  <script src="https://unpkg.com/javascript-lp-solver/prod/solver.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="header">
+      <h1 class="title">Mount Material Optimizer</h1>
+    </section>
+
+    <section class="content">
+      <div class="toolbar">
+        <button class="ghost" id="nbtScanButton" type="button">NBT Scan</button>
+        <label class="control algo-control" for="algoModeSelect">
+          <span>Algorithm</span>
+          <select id="algoModeSelect" class="algo-select">
+            <option value="optimal-max">Optimal to Max (least materials)</option>
+            <option value="best-safe">Best Safe Fill (soft overshoot +3)</option>
+          </select>
+        </label>
+        <button class="action" id="calcButton" type="button">Calculate Optimal Materials</button>
+      </div>
+
+      <div class="table-wrap">
+        <table id="statTable">
+          <thead>
+            <tr>
+              <th>Stat</th>
+              <th>Current Level</th>
+              <th>Current Limit</th>
+              <th>Max</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <section class="results" id="results">
+        <h3>Results</h3>
+        <div id="output">Fill in the table and click Calculate Optimal Materials.</div>
+      </section>
+    </section>
+  </main>
+
+  <div class="nbt-modal" id="nbtModal" aria-hidden="true">
+    <div class="nbt-modal-card" role="dialog" aria-modal="true" aria-labelledby="nbtModalTitle">
+      <button class="nbt-close" id="nbtCloseButton" type="button" aria-label="Close">X</button>
+      <h3 class="nbt-title" id="nbtModalTitle">NBT Scan</h3>
+      <p class="nbt-help">Paste NBT content below. The scanner will fill Current, Limit, and Max for the 8 stats.</p>
+      <textarea id="nbtInput" class="nbt-textarea" spellcheck="false" placeholder="Paste NBT data here..."></textarea>
+      <div class="nbt-actions">
+        <button class="nbt-submit" id="nbtSubmitButton" type="button">Submit</button>
+        <button class="nbt-cancel" id="nbtCancelButton" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="nbt-modal nbt-confirm-modal" id="missingMaxModal" aria-hidden="true">
+    <div class="nbt-modal-card nbt-confirm-card" role="dialog" aria-modal="true" aria-labelledby="missingMaxTitle">
+      <button class="nbt-close" id="missingMaxCloseButton" type="button" aria-label="Close">X</button>
+      <h3 class="nbt-title" id="missingMaxTitle">Missing Max Values</h3>
+      <p class="nbt-help" id="missingMaxMessage"></p>
+      <div class="nbt-actions">
+        <button class="nbt-submit" id="missingMaxProceedButton" type="button">Proceed</button>
+        <button class="nbt-cancel" id="missingMaxCancelButton" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="algorithms.js"></script>
+  <script>
+    const stats = [
+      "Speed",
+      "Acceleration",
+      "Altitude",
+      "Energy",
+      "Handling",
+      "Toughness",
+      "Boost",
+      "Training"
+    ];
+
+    const tbody = document.querySelector("#statTable tbody");
+    const outputElement = document.getElementById("output");
+    const nbtScanButton = document.getElementById("nbtScanButton");
+    const nbtModal = document.getElementById("nbtModal");
+    const nbtInput = document.getElementById("nbtInput");
+    const nbtSubmitButton = document.getElementById("nbtSubmitButton");
+    const nbtCancelButton = document.getElementById("nbtCancelButton");
+    const nbtCloseButton = document.getElementById("nbtCloseButton");
+    const missingMaxModal = document.getElementById("missingMaxModal");
+    const missingMaxMessage = document.getElementById("missingMaxMessage");
+    const missingMaxProceedButton = document.getElementById("missingMaxProceedButton");
+    const missingMaxCancelButton = document.getElementById("missingMaxCancelButton");
+    const missingMaxCloseButton = document.getElementById("missingMaxCloseButton");
+    const algoModeSelect = document.getElementById("algoModeSelect");
+    const algorithms = window.createMountAlgorithms(stats);
+    let pendingParsedResult = null;
+
+    stats.forEach((stat) => {
+      const row = tbody.insertRow();
+      row.innerHTML = `
+        <td>${stat}</td>
+        <td><input type="number" id="current_${stat}" value="1" min="0"></td>
+        <td><input type="number" id="limit_${stat}" value="10" min="0"></td>
+        <td><input type="number" id="max_${stat}" value="30" min="0"></td>
+      `;
+    });
+
+    const materialTiers = {
+      1: {
+        "Copper Ingot": { Energy: 4, Toughness: 8, cost: 1 },
+        "Copper Gem": { Speed: 4, Energy: 2, Training: 6, cost: 1 },
+        "Oak Wood": { Speed: 2, Acceleration: 6, Toughness: 4, cost: 1 },
+        "Oak Paper": { Altitude: 8, Boost: 4, cost: 1 },
+        "Wheat String": { Acceleration: 2, Handling: 4, Boost: 6, cost: 1 },
+        "Wheat Grains": { Speed: 8, Altitude: 4, cost: 1 },
+        "Gudgeon Oil": { Altitude: 2, Handling: 6, Training: 4, cost: 1 },
+        "Gudgeon Meat": { Acceleration: 4, Energy: 8, cost: 1 }
+      },
+      2: {
+        "Granite Ingot": { Energy: 5, Toughness: 10, cost: 1 },
+        "Granite Gem": { Speed: 5, Energy: 2, Training: 8, cost: 1 },
+        "Birch Wood": { Speed: 2, Acceleration: 8, Toughness: 5, cost: 1 },
+        "Birch Paper": { Altitude: 10, Boost: 5, cost: 1 },
+        "Barley String": { Acceleration: 2, Handling: 5, Boost: 8, cost: 1 },
+        "Barley Grains": { Speed: 10, Altitude: 5, cost: 1 },
+        "Trout Oil": { Altitude: 2, Handling: 8, Training: 5, cost: 1 },
+        "Trout Meat": { Acceleration: 5, Energy: 10, cost: 1 }
+      },
+      3: {
+        "Gold Ingot": { Energy: 5, Toughness: 12, cost: 1 },
+        "Gold Gem": { Speed: 6, Energy: 3, Training: 9, cost: 1 },
+        "Willow Wood": { Speed: 3, Acceleration: 9, Toughness: 6, cost: 1 },
+        "Willow Paper": { Altitude: 12, Boost: 5, cost: 1 },
+        "Oat String": { Acceleration: 3, Handling: 6, Boost: 9, cost: 1 },
+        "Oat Grains": { Speed: 12, Altitude: 5, cost: 1 },
+        "Salmon Oil": { Altitude: 3, Handling: 9, Training: 6, cost: 1 },
+        "Salmon Meat": { Acceleration: 5, Energy: 12, cost: 1 }
+      },
+      4: {
+        "Sandstone Ingot": { Energy: 6, Toughness: 14, cost: 1 },
+        "Sandstone Gem": { Speed: 6, Energy: 3, Training: 11, cost: 1 },
+        "Acacia Wood": { Speed: 3, Acceleration: 11, Toughness: 6, cost: 1 },
+        "Acacia Paper": { Altitude: 14, Boost: 6, cost: 1 },
+        "Malt String": { Acceleration: 3, Handling: 6, Boost: 11, cost: 1 },
+        "Malt Grains": { Speed: 14, Altitude: 6, cost: 1 },
+        "Carp Oil": { Altitude: 3, Handling: 11, Training: 6, cost: 1 },
+        "Carp Meat": { Acceleration: 6, Energy: 14, cost: 1 }
+      },
+      5: {
+        "Iron Ingot": { Energy: 6, Toughness: 16, cost: 1 },
+        "Iron Gem": { Speed: 7, Energy: 3, Training: 12, cost: 1 },
+        "Spruce Wood": { Speed: 3, Acceleration: 12, Toughness: 7, cost: 1 },
+        "Spruce Paper": { Altitude: 16, Boost: 6, cost: 1 },
+        "Hops String": { Acceleration: 3, Handling: 7, Boost: 12, cost: 1 },
+        "Hops Grains": { Speed: 16, Altitude: 6, cost: 1 },
+        "Icefish Oil": { Altitude: 3, Handling: 12, Training: 7, cost: 1 },
+        "Icefish Meat": { Acceleration: 6, Energy: 16, cost: 1 }
+      }
+    };
+
+    function pickTier(highestCurrent) {
+      if (highestCurrent < 10) return 1;
+      if (highestCurrent < 20) return 2;
+      if (highestCurrent < 30) return 3;
+      if (highestCurrent < 40) return 4;
+      if (highestCurrent < 50) return 5;
+      return 5;
+    }
+
+    function tierMinLevel(tier) {
+      if (tier <= 1) return 0;
+      if (tier === 2) return 10;
+      if (tier === 3) return 20;
+      if (tier === 4) return 30;
+      return 40;
+    }
+
+    function materialToImageFile(materialName) {
+      return materialName
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, "")
+        .trim()
+        .replace(/\s+/g, "_") + ".jpg";
+    }
+
+    function openNbtModal() {
+      nbtModal.classList.add("open");
+      nbtModal.setAttribute("aria-hidden", "false");
+      nbtInput.focus();
+    }
+
+    function closeNbtModal() {
+      nbtModal.classList.remove("open");
+      nbtModal.setAttribute("aria-hidden", "true");
+    }
+
+    function openMissingMaxModal(missingStats) {
+      missingMaxMessage.textContent = `The parsed data did not include Max for: ${missingStats.join(", ")}. Proceed will use the default Max value already in the table.`;
+      missingMaxModal.classList.add("open");
+      missingMaxModal.setAttribute("aria-hidden", "false");
+      missingMaxProceedButton.focus();
+    }
+
+    function closeMissingMaxModal() {
+      missingMaxModal.classList.remove("open");
+      missingMaxModal.setAttribute("aria-hidden", "true");
+    }
+
+    function applyNbtValues(parsedStats, options = {}) {
+      let updated = 0;
+      const useDefaultMaxForMissing = options.useDefaultMaxForMissing === true;
+
+      stats.forEach((stat) => {
+        const values = parsedStats[stat];
+        if (!values) return;
+
+        const currentInput = document.getElementById(`current_${stat}`);
+        const limitInput = document.getElementById(`limit_${stat}`);
+        const maxInput = document.getElementById(`max_${stat}`);
+
+        currentInput.value = values.current;
+        limitInput.value = values.limit;
+        if (Number.isFinite(values.max) && !(values.inferredMax && useDefaultMaxForMissing)) {
+          maxInput.value = values.max;
+        }
+        updated += 1;
+      });
+
+      return updated;
+    }
+
+    function parseNbtStats(nbtText) {
+      const parsed = {};
+      const missingMaxStats = [];
+      const text = nbtText
+        .replace(/\\\"/g, "\"")
+        .replace(/\r?\n/g, " ");
+
+      function parseWindowRow(windowText) {
+        const currentMatch = windowText.match(/text:"(\d{1,3})"/);
+        if (!currentMatch) return null;
+
+        const tripletMatch = windowText.match(/text:"\/(\d{1,3})\/(\d{1,3})"/);
+        if (tripletMatch) {
+          return {
+            current: Number.parseInt(currentMatch[1], 10),
+            limit: Number.parseInt(tripletMatch[1], 10),
+            max: Number.parseInt(tripletMatch[2], 10),
+            inferredMax: false
+          };
+        }
+
+        const pairMatch = windowText.match(/text:"\/(\d{1,3})"/);
+        if (pairMatch) {
+          const limitOnly = Number.parseInt(pairMatch[1], 10);
+          return {
+            current: Number.parseInt(currentMatch[1], 10),
+            limit: limitOnly,
+            max: limitOnly,
+            inferredMax: true
+          };
+        }
+
+        return null;
+      }
+
+      // Pass 1: parse by stat-local window (most reliable for long NBT strings).
+      stats.forEach((stat) => {
+        const marker = `text:"${stat}"`;
+        const idx = text.indexOf(marker);
+        if (idx === -1) return;
+
+        const window = text.slice(idx, idx + 1200);
+        const row = parseWindowRow(window);
+        if (!row) return;
+
+        parsed[stat] = row;
+        if (row.inferredMax) {
+          missingMaxStats.push(stat);
+        }
+      });
+
+      // Pass 2: parse all current + /limit/max rows in order and fill missing stats.
+      const rows = [];
+      const rowRegex = /text:"(\d{1,3})"[\s\S]{0,140}?text:"\/(\d{1,3})(?:\/(\d{1,3}))?"/g;
+      let rowMatch;
+      while ((rowMatch = rowRegex.exec(text)) !== null) {
+        const limitValue = Number.parseInt(rowMatch[2], 10);
+        const maxValue = rowMatch[3] ? Number.parseInt(rowMatch[3], 10) : limitValue;
+        rows.push({
+          current: Number.parseInt(rowMatch[1], 10),
+          limit: limitValue,
+          max: maxValue,
+          inferredMax: !rowMatch[3]
+        });
+      }
+
+      stats.forEach((stat, index) => {
+        if (!parsed[stat] && rows[index]) {
+          parsed[stat] = rows[index];
+          if (rows[index].inferredMax) {
+            missingMaxStats.push(stat);
+          }
+        }
+      });
+
+      return {
+        parsed,
+        missingMaxStats: [...new Set(missingMaxStats)]
+      };
+    }
+
+    function submitNbtScan() {
+      const text = nbtInput.value.trim();
+      if (!text) {
+        outputElement.innerHTML = "NBT input is empty. Paste the item NBT text and submit.";
+        return;
+      }
+
+      const parsedResult = parseNbtStats(text);
+      const count = Object.keys(parsedResult.parsed).length;
+
+      if (count === 0) {
+        outputElement.innerHTML = "NBT scan could not find stat rows. Paste the full item NBT text and try again.";
+        return;
+      }
+
+      if (parsedResult.missingMaxStats.length > 0) {
+        pendingParsedResult = parsedResult;
+        closeNbtModal();
+        openMissingMaxModal(parsedResult.missingMaxStats);
+        return;
+      }
+
+      applyNbtValues(parsedResult.parsed);
+
+      const missing = stats.filter((stat) => !parsedResult.parsed[stat]);
+      if (missing.length > 0) {
+        outputElement.innerHTML = `NBT scan updated ${count} stats. Missing: ${missing.join(", ")}.`;
+      } else {
+        outputElement.innerHTML = `NBT scan updated all ${count} stats. You can calculate now.`;
+      }
+
+      closeNbtModal();
+    }
+
+    function calculateFeedByMode(currentStats, targetStats, itemDatabase, mode) {
+      if (mode === "best-safe") {
+        return algorithms.calculateBestSafeFeed(currentStats, targetStats, itemDatabase, {
+          softOvershoot: 3,
+          maxDepth: 15
+        });
+      }
+
+      return algorithms.calculateOptimalFeed(currentStats, targetStats, itemDatabase);
+    }
+
+    function extractItemCounts(result, activeMaterials) {
+      const itemCounts = {};
+
+      Object.keys(activeMaterials).forEach((mat) => {
+        const qty = result.usedItems
+          ? result.usedItems[mat]
+          : (result[mat] || (result.counts ? result.counts[mat] : 0));
+
+        if (qty && qty > 0) {
+          itemCounts[mat] = qty;
+        }
+      });
+
+      return itemCounts;
+    }
+
+    function calculate() {
+      let highestCurrent = 0;
+      let highestLimit = 0;
+      const deficits = {};
+      const notes = [];
+      const limitValues = {};
+      const maxValues = {};
+
+      stats.forEach((stat) => {
+        const currentInput = document.getElementById(`current_${stat}`);
+        const limitInput = document.getElementById(`limit_${stat}`);
+        const maxInput = document.getElementById(`max_${stat}`);
+
+        const current = Number.parseInt(currentInput.value, 10) || 0;
+        const limit = Number.parseInt(limitInput.value, 10) || 0;
+        const rawMax = Number.parseInt(maxInput.value, 10) || 0;
+        const maxValue = rawMax;
+
+        if (current > highestCurrent) highestCurrent = current;
+        if (limit > highestLimit) highestLimit = limit;
+
+        limitValues[stat] = limit;
+        maxValues[stat] = maxValue;
+        deficits[stat] = Math.max(0, maxValue - limit);
+      });
+
+      const activeTier = pickTier(highestCurrent);
+      const activeMaterials = materialTiers[activeTier];
+
+      if (!activeMaterials) {
+        outputElement.innerHTML = `Material data for Tier ${activeTier} is missing.`;
+        return;
+      }
+
+      let hasAnyDeficit = false;
+
+      stats.forEach((stat) => {
+        if (deficits[stat] > 0) {
+          hasAnyDeficit = true;
+        }
+      });
+
+      if (!hasAnyDeficit) {
+        outputElement.innerHTML = "<p class=\"ok\">No materials needed. Your limit stats already meet max values.</p>";
+        return;
+      }
+
+      const algoMode = algoModeSelect.value;
+      const result = calculateFeedByMode(limitValues, maxValues, activeMaterials, algoMode);
+      const algorithmLabel = algoMode === "best-safe"
+        ? "Best safe fill (maximize limits with per-stat soft overshoot cap +3)"
+        : "Optimal least-material branch and bound";
+
+      let outputHTML = `<p><strong>Using Tier ${activeTier} materials</strong></p><p><strong>Algorithm:</strong> ${algorithmLabel}</p>`;
+
+      if (result && result.feasible) {
+        let totalItems = 0;
+        const gainedByStat = Object.fromEntries(stats.map((stat) => [stat, 0]));
+        outputHTML += "<ul>";
+
+        Object.keys(activeMaterials).forEach((mat) => {
+          const qty = result.usedItems
+            ? result.usedItems[mat]
+            : (result[mat] || (result.counts ? result.counts[mat] : 0));
+          if (qty && qty > 0) {
+            const imageFile = materialToImageFile(mat);
+            outputHTML += `<li class="material-row"><img class="material-icon" src="img/mats/${imageFile}" alt="${mat}" onerror="this.style.display='none'">${qty}x ${mat}</li>`;
+            totalItems += qty;
+
+            stats.forEach((stat) => {
+              const value = activeMaterials[mat][stat] || 0;
+              gainedByStat[stat] += value * qty;
+            });
+          }
+        });
+
+        outputHTML += "</ul>";
+        const currentTierTotalItems = Number.isFinite(result.totalItems) ? result.totalItems : totalItems;
+        outputHTML += `<p><strong>Total materials needed: ${currentTierTotalItems}</strong></p>`;
+
+        // Optional recommendation: if next tier is reachable by training to its threshold,
+        // compare material counts and suggest waiting when it reduces total items.
+        const nextTier = activeTier + 1;
+        if (nextTier <= 5) {
+          const nextTierThreshold = tierMinLevel(nextTier);
+          const canReachNextTier = highestLimit >= nextTierThreshold;
+
+          if (canReachNextTier) {
+            const nextTierMaterials = materialTiers[nextTier];
+            if (nextTierMaterials) {
+              const nextTierResult = calculateFeedByMode(limitValues, maxValues, nextTierMaterials, algoMode);
+              if (nextTierResult && nextTierResult.feasible) {
+                const nextTierTotalItems = Number.isFinite(nextTierResult.totalItems)
+                  ? nextTierResult.totalItems
+                  : Object.values(nextTierResult.usedItems || {}).reduce((sum, qty) => sum + qty, 0);
+
+                outputHTML += `<p class="note">Tier check: current Tier ${activeTier} needs ${currentTierTotalItems} items, Tier ${nextTier} needs ${nextTierTotalItems} items.</p>`;
+
+                if (nextTierTotalItems < currentTierTotalItems) {
+                  outputHTML += `<p class="note">Tip: If you train your mount to level ${nextTierThreshold} (unlock Tier ${nextTier}), recomputing with Tier ${nextTier} materials would use fewer items: ${nextTierTotalItems} vs ${currentTierTotalItems}.</p>`;
+                }
+              }
+            }
+          }
+        }
+
+        const overshootWarnings = [];
+        stats.forEach((stat) => {
+          const finalValue = limitValues[stat] + gainedByStat[stat];
+          const overshoot = finalValue - maxValues[stat];
+          if (overshoot > 0) {
+            overshootWarnings.push(`${stat} limit passes max by: ${overshoot} (${maxValues[stat]} < ${maxValues[stat] + overshoot})`);
+          }
+        });
+
+        if (overshootWarnings.length > 0) {
+          outputHTML += `<p class="note">${overshootWarnings.join("<br>")}</p>`;
+        }
+      } else {
+        outputHTML += `Selected algorithm could not find a useful combination in this tier. ${result && result.reason ? result.reason : ""}`;
+      }
+
+      if (highestCurrent >= 50) {
+        notes.push("Current level is 50 or higher. Tier 5 is used as fallback until higher-tier data is added.");
+      }
+
+      if (notes.length > 0) {
+        outputHTML += `<p class="note">${notes.join("<br>")}</p>`;
+      }
+
+      outputElement.innerHTML = outputHTML;
+    }
+
+    document.getElementById("calcButton").addEventListener("click", calculate);
+    nbtScanButton.addEventListener("click", openNbtModal);
+    nbtSubmitButton.addEventListener("click", submitNbtScan);
+    nbtCancelButton.addEventListener("click", closeNbtModal);
+    nbtCloseButton.addEventListener("click", closeNbtModal);
+
+    missingMaxProceedButton.addEventListener("click", () => {
+      if (!pendingParsedResult) {
+        closeMissingMaxModal();
+        return;
+      }
+
+      const count = applyNbtValues(pendingParsedResult.parsed, { useDefaultMaxForMissing: true });
+      const missing = stats.filter((stat) => !pendingParsedResult.parsed[stat]);
+
+      if (missing.length > 0) {
+        outputElement.innerHTML = `NBT scan updated ${count} stats. Missing: ${missing.join(", ")}.`;
+      } else {
+        outputElement.innerHTML = `NBT scan updated all ${count} stats. Missing Max values were left at default table values.`;
+      }
+
+      pendingParsedResult = null;
+      closeMissingMaxModal();
+    });
+
+    function cancelMissingMaxFlow() {
+      pendingParsedResult = null;
+      closeMissingMaxModal();
+    }
+
+    missingMaxCancelButton.addEventListener("click", cancelMissingMaxFlow);
+    missingMaxCloseButton.addEventListener("click", cancelMissingMaxFlow);
+
+    nbtModal.addEventListener("click", (event) => {
+      if (event.target === nbtModal) {
+        closeNbtModal();
+      }
+    });
+
+    missingMaxModal.addEventListener("click", (event) => {
+      if (event.target === missingMaxModal) {
+        cancelMissingMaxFlow();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && missingMaxModal.classList.contains("open")) {
+        cancelMissingMaxFlow();
+        return;
+      }
+
+      if (event.key === "Escape" && nbtModal.classList.contains("open")) {
+        closeNbtModal();
+      }
+    });
+  </script>
+</body>
+</html>
