@@ -22,8 +22,8 @@
         <label class="control algo-control" for="algoModeSelect">
           <span>Algorithm</span>
           <select id="algoModeSelect" class="algo-select">
-            <option value="optimal-max">Optimal to Max (least materials)</option>
-            <option value="best-safe">Best Safe Fill (soft overshoot +3)</option>
+            <option value="best-safe-90" selected>Optimal for BREED</option>
+            <option value="optimal-max">Optimal for MAX</option>
           </select>
         </label>
         <button class="action" id="calcButton" type="button">Calculate Optimal Materials</button>
@@ -44,8 +44,20 @@
       </div>
 
       <section class="results" id="results">
-        <h3>Results</h3>
+        <div class="results-head">
+          <h3>Results</h3>
+          <button class="advanced-toggle" id="advancedToggle" type="button" aria-expanded="false">Advanced (Off)</button>
+        </div>
         <div id="output">Fill in the table and click Calculate Optimal Materials.</div>
+        <div class="advanced-body" id="advancedBody" hidden>
+          <div class="advanced-controls">
+            <label for="advancedStageSlider">Stage</label>
+            <input type="range" id="advancedStageSlider" min="0" max="1000" step="1" value="0" disabled>
+            <span id="advancedStageLabel">Stage 0 / 0</span>
+          </div>
+          <div class="advanced-meta" id="advancedMeta">Run calculate to view stage-by-stage changes.</div>
+          <div class="advanced-diff" id="advancedDiff"></div>
+        </div>
       </section>
     </section>
   </main>
@@ -58,7 +70,7 @@
       <textarea id="nbtInput" class="nbt-textarea" spellcheck="false" placeholder="Paste NBT data here..."></textarea>
       <div class="nbt-actions">
         <button class="nbt-submit" id="nbtSubmitButton" type="button">Submit</button>
-        <button class="nbt-cancel" id="nbtCancelButton" type="button">Cancel</button>
+        <button class="nbt-cancel" id="nbtClearButton" type="button">Clear</button>
       </div>
     </div>
   </div>
@@ -94,7 +106,7 @@
     const nbtModal = document.getElementById("nbtModal");
     const nbtInput = document.getElementById("nbtInput");
     const nbtSubmitButton = document.getElementById("nbtSubmitButton");
-    const nbtCancelButton = document.getElementById("nbtCancelButton");
+    const nbtClearButton = document.getElementById("nbtClearButton");
     const nbtCloseButton = document.getElementById("nbtCloseButton");
     const missingMaxModal = document.getElementById("missingMaxModal");
     const missingMaxMessage = document.getElementById("missingMaxMessage");
@@ -102,8 +114,17 @@
     const missingMaxCancelButton = document.getElementById("missingMaxCancelButton");
     const missingMaxCloseButton = document.getElementById("missingMaxCloseButton");
     const algoModeSelect = document.getElementById("algoModeSelect");
+    const advancedToggle = document.getElementById("advancedToggle");
+    const advancedBody = document.getElementById("advancedBody");
+    const advancedStageSlider = document.getElementById("advancedStageSlider");
+    const advancedStageLabel = document.getElementById("advancedStageLabel");
+    const advancedMeta = document.getElementById("advancedMeta");
+    const advancedDiff = document.getElementById("advancedDiff");
     const algorithms = window.createMountAlgorithms(stats);
     let pendingParsedResult = null;
+    let advancedState = null;
+    let advancedEnabled = false;
+    const advancedSliderMax = 1000;
 
     stats.forEach((stat) => {
       const row = tbody.insertRow();
@@ -165,6 +186,96 @@
         "Hops Grains": { Speed: 16, Altitude: 6, cost: 1 },
         "Icefish Oil": { Altitude: 3, Handling: 12, Training: 7, cost: 1 },
         "Icefish Meat": { Acceleration: 6, Energy: 16, cost: 1 }
+      },
+      6: {
+        "Silver Ingot": { Energy: 7, Toughness: 18, cost: 1 },
+        "Silver Gem": { Speed: 8, Energy: 4, Training: 14, cost: 1 },
+        "Jungle Wood": { Speed: 4, Acceleration: 14, Toughness: 8, cost: 1 },
+        "Jungle Paper": { Altitude: 18, Boost: 7, cost: 1 },
+        "Rye String": { Acceleration: 4, Handling: 8, Boost: 14, cost: 1 },
+        "Rye Grains": { Speed: 18, Altitude: 7, cost: 1 },
+        "Piranha Oil": { Altitude: 4, Handling: 14, Training: 8, cost: 1 },
+        "Piranha Meat": { Acceleration: 7, Energy: 18, cost: 1 }
+      },
+      7: {
+        "Cobalt Ingot": { Energy: 8, Toughness: 20, cost: 1 },
+        "Cobalt Gem": { Speed: 9, Energy: 4, Training: 15, cost: 1 },
+        "Dark Wood": { Speed: 4, Acceleration: 15, Toughness: 9, cost: 1 },
+        "Dark Paper": { Altitude: 20, Boost: 8, cost: 1 },
+        "Millet String": { Acceleration: 4, Handling: 9, Boost: 15, cost: 1 },
+        "Millet Grains": { Speed: 20, Altitude: 8, cost: 1 },
+        "Koi Oil": { Altitude: 4, Handling: 15, Training: 9, cost: 1 },
+        "Koi Meat": { Acceleration: 8, Energy: 20, cost: 1 }
+      },
+      8: {
+        "Kanderstone Ingot": { Energy: 8, Toughness: 22, cost: 1 },
+        "Kanderstone Gem": { Speed: 10, Energy: 4, Training: 17, cost: 1 },
+        "Light Wood": { Speed: 4, Acceleration: 17, Toughness: 10, cost: 1 },
+        "Light Paper": { Altitude: 22, Boost: 8, cost: 1 },
+        "Decay String": { Acceleration: 4, Handling: 10, Boost: 17, cost: 1 },
+        "Decay Grains": { Speed: 22, Altitude: 8, cost: 1 },
+        "Gylia Oil": { Altitude: 4, Handling: 17, Training: 10, cost: 1 },
+        "Gylia Meat": { Acceleration: 8, Energy: 22, cost: 1 }
+      },
+      9: {
+        "Diamond Ingot": { Energy: 9, Toughness: 24, cost: 1 },
+        "Diamond Gem": { Speed: 10, Energy: 4, Training: 18, cost: 1 },
+        "Pine Wood": { Speed: 4, Acceleration: 18, Toughness: 10, cost: 1 },
+        "Pine Paper": { Altitude: 24, Boost: 9, cost: 1 },
+        "Rice String": { Acceleration: 4, Handling: 10, Boost: 18, cost: 1 },
+        "Rice Grains": { Speed: 24, Altitude: 9, cost: 1 },
+        "Bass Oil": { Altitude: 4, Handling: 18, Training: 10, cost: 1 },
+        "Bass Meat": { Acceleration: 9, Energy: 24, cost: 1 }
+      },
+      10: {
+        "Molten Ingot": { Energy: 9, Toughness: 26, cost: 1 },
+        "Molten Gem": { Speed: 11, Energy: 5, Training: 20, cost: 1 },
+        "Avo Wood": { Speed: 5, Acceleration: 20, Toughness: 11, cost: 1 },
+        "Avo Paper": { Altitude: 26, Boost: 9, cost: 1 },
+        "Sorghum String": { Acceleration: 5, Handling: 11, Boost: 20, cost: 1 },
+        "Sorghum Grains": { Speed: 26, Altitude: 9, cost: 1 },
+        "Molten Oil": { Altitude: 5, Handling: 20, Training: 11, cost: 1 },
+        "Molten Meat": { Acceleration: 9, Energy: 26, cost: 1 }
+      },
+      11: {
+        "Voidstone Ingot": { Energy: 10, Toughness: 28, cost: 1 },
+        "Voidstone Gem": { Speed: 12, Energy: 5, Training: 21, cost: 1 },
+        "Sky Wood": { Speed: 5, Acceleration: 21, Toughness: 12, cost: 1 },
+        "Sky Paper": { Altitude: 28, Boost: 10, cost: 1 },
+        "Hemp String": { Acceleration: 5, Handling: 12, Boost: 21, cost: 1 },
+        "Hemp Grains": { Speed: 28, Altitude: 10, cost: 1 },
+        "Starfish Oil": { Altitude: 5, Handling: 21, Training: 12, cost: 1 },
+        "Starfish Meat": { Acceleration: 10, Energy: 28, cost: 1 }
+      },
+      12: {
+        "Dernic Ingot": { Energy: 10, Toughness: 29, cost: 1 },
+        "Dernic Gem": { Speed: 12, Energy: 5, Training: 22, cost: 1 },
+        "Dernic Wood": { Speed: 5, Acceleration: 22, Toughness: 12, cost: 1 },
+        "Dernic Paper": { Altitude: 29, Boost: 10, cost: 1 },
+        "Dernic String": { Acceleration: 5, Handling: 12, Boost: 22, cost: 1 },
+        "Dernic Grains": { Speed: 29, Altitude: 10, cost: 1 },
+        "Dernic Oil": { Altitude: 5, Handling: 22, Training: 12, cost: 1 },
+        "Dernic Meat": { Acceleration: 10, Energy: 29, cost: 1 }
+      },
+      13: {
+        "Titanium Ingot": { Energy: 11, Toughness: 30, cost: 1 },
+        "Titanium Gem": { Speed: 13, Energy: 5, Training: 23, cost: 1 },
+        "Maple Wood": { Speed: 5, Acceleration: 23, Toughness: 13, cost: 1 },
+        "Maple Paper": { Altitude: 30, Boost: 11, cost: 1 },
+        "Jute String": { Acceleration: 5, Handling: 13, Boost: 23, cost: 1 },
+        "Jute Grains": { Speed: 30, Altitude: 11, cost: 1 },
+        "Sturgeon Oil": { Altitude: 5, Handling: 23, Training: 13, cost: 1 },
+        "Sturgeon Meat": { Acceleration: 11, Energy: 30, cost: 1 }
+      },
+      14: {
+        "Cinnabar Ingot": { Energy: 11, Toughness: 31, cost: 1 },
+        "Cinnabar Gem": { Speed: 13, Energy: 5, Training: 23, cost: 1 },
+        "Redwood Wood": { Speed: 5, Acceleration: 23, Toughness: 13, cost: 1 },
+        "Redwood Paper": { Altitude: 31, Boost: 11, cost: 1 },
+        "Heather String": { Acceleration: 5, Handling: 13, Boost: 23, cost: 1 },
+        "Heather Grains": { Speed: 31, Altitude: 11, cost: 1 },
+        "Mahseer Oil": { Altitude: 5, Handling: 23, Training: 13, cost: 1 },
+        "Mahseer Meat": { Acceleration: 11, Energy: 31, cost: 1 }
       }
     };
 
@@ -174,7 +285,15 @@
       if (highestCurrent < 30) return 3;
       if (highestCurrent < 40) return 4;
       if (highestCurrent < 50) return 5;
-      return 5;
+      if (highestCurrent < 60) return 6;
+      if (highestCurrent < 70) return 7;
+      if (highestCurrent < 80) return 8;
+      if (highestCurrent < 90) return 9;
+      if (highestCurrent < 100) return 10;
+      if (highestCurrent < 105) return 11;
+      if (highestCurrent < 110) return 12;
+      if (highestCurrent < 115) return 13;
+      return 14;
     }
 
     function tierMinLevel(tier) {
@@ -182,7 +301,16 @@
       if (tier === 2) return 10;
       if (tier === 3) return 20;
       if (tier === 4) return 30;
-      return 40;
+      if (tier === 5) return 40;
+      if (tier === 6) return 50;
+      if (tier === 7) return 60;
+      if (tier === 8) return 70;
+      if (tier === 9) return 80;
+      if (tier === 10) return 90;
+      if (tier === 11) return 100;
+      if (tier === 12) return 105;
+      if (tier === 13) return 110;
+      return 115;
     }
 
     function materialToImageFile(materialName) {
@@ -352,17 +480,43 @@
       }
 
       closeNbtModal();
+      calculate();
     }
 
     function calculateFeedByMode(currentStats, targetStats, itemDatabase, mode) {
-      if (mode === "best-safe") {
-        return algorithms.calculateBestSafeFeed(currentStats, targetStats, itemDatabase, {
+      return calculateFeedForModeTierless(currentStats, targetStats, itemDatabase, mode);
+    }
+
+    function calculateFeedForModeTierless(currentStats, targetStats, itemDatabase, mode) {
+      if (mode === "best-safe-90") {
+        return algorithms.calculateBestSafeFeedWithMinimum(currentStats, targetStats, itemDatabase, {
           softOvershoot: 3,
-          maxDepth: 15
+          maxDepth: 15,
+          minCoverageRatio: 0.9,
+          perStatFloorRatio: 0.8,
+          targetCoverageRatio: 0.9,
+          efficiencyFloor: 3
+        });
+      }
+
+      if (mode === "best-safe-100") {
+        return algorithms.calculateBestSafeFeedWithMinimum(currentStats, targetStats, itemDatabase, {
+          softOvershoot: 3,
+          maxDepth: 20,
+          minCoverageRatio: 1.0,
+          perStatFloorRatio: 0.75,
+          targetCoverageRatio: 1.0,
+          efficiencyFloor: 3
         });
       }
 
       return algorithms.calculateOptimalFeed(currentStats, targetStats, itemDatabase);
+    }
+
+    function getResultTotalItems(result) {
+      if (!result || !result.feasible) return null;
+      if (Number.isFinite(result.totalItems)) return result.totalItems;
+      return Object.values(result.usedItems || {}).reduce((sum, qty) => sum + qty, 0);
     }
 
     function extractItemCounts(result, activeMaterials) {
@@ -379,6 +533,120 @@
       });
 
       return itemCounts;
+    }
+
+    function getTierSoftOvershoot(tier) {
+      return Math.max(3, tier + 2);
+    }
+
+    function calculateFeedForTier(currentStats, targetStats, itemDatabase, mode, tier) {
+      if (mode !== "best-safe-90" && mode !== "best-safe-100") {
+        return calculateFeedByMode(currentStats, targetStats, itemDatabase, mode);
+      }
+
+      return algorithms.calculateBestSafeFeedWithMinimum(currentStats, targetStats, itemDatabase, {
+        softOvershoot: getTierSoftOvershoot(tier),
+        maxDepth: mode === "best-safe-100" ? 20 : 15,
+        minCoverageRatio: mode === "best-safe-100" ? 1.0 : 0.9,
+        perStatFloorRatio: mode === "best-safe-100" ? 0.75 : 0.8,
+        targetCoverageRatio: mode === "best-safe-100" ? 1.0 : 0.9,
+        efficiencyFloor: 3
+      });
+    }
+
+    function createAdvancedTimeline(startLimits, itemCounts, activeMaterials) {
+      const sequence = [];
+
+      Object.keys(activeMaterials).forEach((material) => {
+        const qty = Number(itemCounts[material] || 0);
+        for (let i = 0; i < qty; i += 1) {
+          sequence.push(material);
+        }
+      });
+
+      const timeline = [{ limits: { ...startLimits }, appliedMaterial: null }];
+      let running = { ...startLimits };
+
+      sequence.forEach((material) => {
+        const next = { ...running };
+        stats.forEach((stat) => {
+          next[stat] += Number(activeMaterials[material][stat] || 0);
+        });
+        timeline.push({ limits: next, appliedMaterial: material });
+        running = next;
+      });
+
+      return timeline;
+    }
+
+    function renderAdvancedStage() {
+      advancedBody.hidden = !(advancedEnabled && !!advancedState);
+
+      if (!advancedState) {
+        advancedStageSlider.value = "0";
+        advancedStageSlider.min = "0";
+        advancedStageSlider.max = String(advancedSliderMax);
+        advancedStageSlider.disabled = true;
+        advancedStageLabel.textContent = "Stage 0 / 0";
+        advancedMeta.textContent = "Run calculate to view stage-by-stage changes.";
+        advancedDiff.innerHTML = "";
+        return;
+      }
+
+      const maxStage = Math.max(0, advancedState.timeline.length - 1);
+      let sliderValue = Number.parseFloat(advancedStageSlider.value);
+      if (!Number.isFinite(sliderValue)) sliderValue = 0;
+      sliderValue = Math.max(0, Math.min(advancedSliderMax, sliderValue));
+      const stage = maxStage > 0
+        ? Math.round((sliderValue / advancedSliderMax) * maxStage)
+        : 0;
+
+      advancedStageSlider.min = "0";
+      advancedStageSlider.max = String(advancedSliderMax);
+      advancedStageSlider.disabled = maxStage === 0;
+      advancedStageLabel.textContent = `Stage ${stage} / ${maxStage}`;
+
+      const after = advancedState.timeline[stage];
+      const before = stage > 0 ? advancedState.timeline[stage - 1] : advancedState.timeline[0];
+
+      if (stage === 0) {
+        advancedMeta.textContent = "Before applying materials (baseline).";
+      } else {
+        advancedMeta.textContent = `Applied at this stage: ${after.appliedMaterial}`;
+      }
+
+      if (advancedState.coverageSummary) {
+        advancedMeta.innerHTML = `${advancedMeta.textContent}<br>${advancedState.coverageSummary}`;
+      }
+
+      let rowsHtml = "";
+      stats.forEach((stat) => {
+        const beforeValue = Number(before.limits[stat] || 0);
+        const afterValue = Number(after.limits[stat] || 0);
+        const maxValue = Number(advancedState.maxValues[stat] || 0);
+        const beforeDisplay = Math.min(beforeValue, maxValue);
+        const afterDisplay = Math.min(afterValue, maxValue);
+        const delta = afterValue - beforeValue;
+        const deltaText = delta > 0 ? `+${delta}` : `${delta}`;
+        const overshoot = Math.max(0, afterValue - maxValue);
+        const overshootText = overshoot > 0 ? `+${overshoot}` : "0";
+        rowsHtml += `<tr><td class="stat-col">${stat}</td><td class="before-col">${beforeDisplay}/${maxValue}</td><td class="after-col">${afterDisplay}/${maxValue}</td><td class="change-col">${deltaText}</td><td class="overshoot-col">${overshootText}</td></tr>`;
+      });
+
+      advancedDiff.innerHTML = `
+        <table class="advanced-table">
+          <thead>
+            <tr>
+              <th class="stat-col">Stat</th>
+              <th class="before-col">Before</th>
+              <th class="after-col">After</th>
+              <th class="change-col">Change</th>
+              <th class="overshoot-col">Overshoot</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      `;
     }
 
     function calculate() {
@@ -429,22 +697,26 @@
       }
 
       const algoMode = algoModeSelect.value;
-      const result = calculateFeedByMode(limitValues, maxValues, activeMaterials, algoMode);
-      const algorithmLabel = algoMode === "best-safe"
-        ? "Best safe fill (maximize limits with per-stat soft overshoot cap +3)"
-        : "Optimal least-material branch and bound";
+      const result = calculateFeedForTier(limitValues, maxValues, activeMaterials, algoMode, activeTier);
+      const algorithmLabel = algoMode === "best-safe-90"
+        ? "Optimal to breed"
+        : (algoMode === "best-safe-100"
+          ? "Optimal to breed"
+          : "Optimal to MAX");
 
       let outputHTML = `<p><strong>Using Tier ${activeTier} materials</strong></p><p><strong>Algorithm:</strong> ${algorithmLabel}</p>`;
+
+      advancedState = null;
+      renderAdvancedStage();
 
       if (result && result.feasible) {
         let totalItems = 0;
         const gainedByStat = Object.fromEntries(stats.map((stat) => [stat, 0]));
+        const itemCounts = extractItemCounts(result, activeMaterials);
         outputHTML += "<ul>";
 
         Object.keys(activeMaterials).forEach((mat) => {
-          const qty = result.usedItems
-            ? result.usedItems[mat]
-            : (result[mat] || (result.counts ? result.counts[mat] : 0));
+          const qty = itemCounts[mat] || 0;
           if (qty && qty > 0) {
             const imageFile = materialToImageFile(mat);
             outputHTML += `<li class="material-row"><img class="material-icon" src="img/mats/${imageFile}" alt="${mat}" onerror="this.style.display='none'">${qty}x ${mat}</li>`;
@@ -461,29 +733,54 @@
         const currentTierTotalItems = Number.isFinite(result.totalItems) ? result.totalItems : totalItems;
         outputHTML += `<p><strong>Total materials needed: ${currentTierTotalItems}</strong></p>`;
 
-        // Optional recommendation: if next tier is reachable by training to its threshold,
-        // compare material counts and suggest waiting when it reduces total items.
-        const nextTier = activeTier + 1;
-        if (nextTier <= 5) {
-          const nextTierThreshold = tierMinLevel(nextTier);
-          const canReachNextTier = highestLimit >= nextTierThreshold;
+        const coverageSummary = algoMode === "best-safe-90" || algoMode === "best-safe-100"
+          ? (() => {
+            const totalCoveragePct = Number.isFinite(result.totalCoverageRatio)
+              ? Math.round(result.totalCoverageRatio * 100)
+              : 0;
+            const minCoveragePct = Number.isFinite(result.achievedMinCoverage)
+              ? Math.round(result.achievedMinCoverage * 100)
+              : 0;
+            const targetPct = algoMode === "best-safe-100" ? 100 : 90;
+            const floorPct = algoMode === "best-safe-100" ? 75 : 80;
+            return `Coverage check: total ${totalCoveragePct}% (target ${targetPct}%), weakest stat ${minCoveragePct}% (floor ${floorPct}%).`;
+          })()
+          : "";
 
-          if (canReachNextTier) {
-            const nextTierMaterials = materialTiers[nextTier];
-            if (nextTierMaterials) {
-              const nextTierResult = calculateFeedByMode(limitValues, maxValues, nextTierMaterials, algoMode);
-              if (nextTierResult && nextTierResult.feasible) {
-                const nextTierTotalItems = Number.isFinite(nextTierResult.totalItems)
-                  ? nextTierResult.totalItems
-                  : Object.values(nextTierResult.usedItems || {}).reduce((sum, qty) => sum + qty, 0);
+        advancedState = {
+          timeline: createAdvancedTimeline(limitValues, itemCounts, activeMaterials),
+          maxValues: { ...maxValues },
+          coverageSummary
+        };
+        advancedStageSlider.value = String(advancedSliderMax);
+        renderAdvancedStage();
 
-                outputHTML += `<p class="note">Tier check: current Tier ${activeTier} needs ${currentTierTotalItems} items, Tier ${nextTier} needs ${nextTierTotalItems} items.</p>`;
+        // Show only one best tip from the selected algorithm, preferring higher tier on ties.
+        const maxTier = Math.max(...Object.keys(materialTiers).map((key) => Number(key)));
+        const reachableTierResults = [];
 
-                if (nextTierTotalItems < currentTierTotalItems) {
-                  outputHTML += `<p class="note">Tip: If you train your mount to level ${nextTierThreshold} (unlock Tier ${nextTier}), recomputing with Tier ${nextTier} materials would use fewer items: ${nextTierTotalItems} vs ${currentTierTotalItems}.</p>`;
-                }
-              }
-            }
+        for (let tier = activeTier + 1; tier <= maxTier; tier += 1) {
+          const threshold = tierMinLevel(tier);
+          if (highestLimit < threshold) continue;
+
+          const candidateMaterials = materialTiers[tier];
+          if (!candidateMaterials) continue;
+
+          const tierResult = calculateFeedForTier(limitValues, maxValues, candidateMaterials, algoMode, tier);
+          const tierTotalItems = getResultTotalItems(tierResult);
+          if (!Number.isFinite(tierTotalItems)) continue;
+
+          reachableTierResults.push({ tier, threshold, totalItems: tierTotalItems });
+        }
+
+        if (reachableTierResults.length > 0) {
+          const bestHigherTotal = Math.min(...reachableTierResults.map((entry) => entry.totalItems));
+          if (bestHigherTotal < currentTierTotalItems) {
+            const best = reachableTierResults
+              .filter((entry) => entry.totalItems === bestHigherTotal)
+              .sort((a, b) => b.tier - a.tier)[0];
+
+            outputHTML += `<p class="note">Tip: train to level ${best.threshold} (Tier ${best.tier}) for fewer items: ${best.totalItems} vs ${currentTierTotalItems}.</p>`;
           }
         }
 
@@ -501,10 +798,12 @@
         }
       } else {
         outputHTML += `Selected algorithm could not find a useful combination in this tier. ${result && result.reason ? result.reason : ""}`;
+        advancedState = null;
+        renderAdvancedStage();
       }
 
-      if (highestCurrent >= 50) {
-        notes.push("Current level is 50 or higher. Tier 5 is used as fallback until higher-tier data is added.");
+      if (highestCurrent > 115) {
+        notes.push("Current level is above 115. Tier 14 is used as fallback until higher-tier data is added.");
       }
 
       if (notes.length > 0) {
@@ -517,7 +816,10 @@
     document.getElementById("calcButton").addEventListener("click", calculate);
     nbtScanButton.addEventListener("click", openNbtModal);
     nbtSubmitButton.addEventListener("click", submitNbtScan);
-    nbtCancelButton.addEventListener("click", closeNbtModal);
+    nbtClearButton.addEventListener("click", () => {
+      nbtInput.value = "";
+      nbtInput.focus();
+    });
     nbtCloseButton.addEventListener("click", closeNbtModal);
 
     missingMaxProceedButton.addEventListener("click", () => {
@@ -537,6 +839,7 @@
 
       pendingParsedResult = null;
       closeMissingMaxModal();
+      calculate();
     });
 
     function cancelMissingMaxFlow() {
@@ -568,6 +871,17 @@
       if (event.key === "Escape" && nbtModal.classList.contains("open")) {
         closeNbtModal();
       }
+    });
+
+    advancedToggle.addEventListener("click", () => {
+      advancedEnabled = !advancedEnabled;
+      advancedToggle.setAttribute("aria-expanded", advancedEnabled ? "true" : "false");
+      advancedToggle.textContent = advancedEnabled ? "Advanced (On)" : "Advanced (Off)";
+      renderAdvancedStage();
+    });
+
+    advancedStageSlider.addEventListener("input", () => {
+      renderAdvancedStage();
     });
   </script>
 </body>

@@ -85,6 +85,7 @@ body {
   background: rgba(35, 66, 106, 0.4);
   color: var(--text-dim);
   padding: 8px 12px;
+  min-height: 56px;
   border-radius: 10px;
   font-size: 0.86rem;
 }
@@ -105,11 +106,13 @@ body {
   color: #eaf4ff;
   border: 1px solid #5f95e6;
   border-radius: 10px;
-  padding: 10px 18px;
-  font-size: 0.95rem;
+  padding: 8px 14px;
+  min-height: 48px;
+  width: 240px;
+  font-size: 0.9rem;
   font-family: "Rajdhani", sans-serif;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
   transition: transform 120ms ease, filter 120ms ease;
@@ -142,10 +145,16 @@ body {
 
 .algo-control {
   margin-left: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  min-height: 0;
+  border-radius: 0;
 }
 
 .algo-select {
-  min-width: 290px;
+  min-width: 210px;
+  min-height: 40px;
   border-radius: 8px;
   border: 1px solid #3b5e8c;
   background: #0e1b31;
@@ -236,8 +245,16 @@ input[type="number"] {
   padding: 14px;
 }
 
+.results-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
 .results h3 {
-  margin: 0 0 10px;
+  margin: 0;
   font-family: "Rajdhani", sans-serif;
   font-size: 1.05rem;
   text-transform: uppercase;
@@ -252,6 +269,99 @@ input[type="number"] {
 
 .ok {
   color: var(--ok);
+}
+
+.advanced-toggle {
+  border: 1px solid #5f95e6;
+  background: transparent;
+  color: #d8ecff;
+  border-radius: 9px;
+  padding: 8px 12px;
+  font-family: "Rajdhani", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.advanced-body {
+  margin-top: 12px;
+  border-top: 1px solid rgba(57, 93, 137, 0.6);
+  padding-top: 12px;
+}
+
+.advanced-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.advanced-controls label {
+  font-family: "Rajdhani", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+}
+
+.advanced-controls input[type="range"] {
+  flex: 1;
+  min-width: 220px;
+}
+
+.advanced-meta {
+  margin-top: 8px;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+}
+
+.advanced-diff {
+  margin-top: 10px;
+}
+
+.advanced-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 540px;
+}
+
+.advanced-table th,
+.advanced-table td {
+  border-bottom: 1px solid rgba(57, 93, 137, 0.65);
+  border-right: 1px solid rgba(57, 93, 137, 0.45);
+  text-align: center;
+  padding: 8px 6px;
+  font-size: 0.86rem;
+}
+
+.advanced-table th {
+  background: #1b3658;
+}
+
+.advanced-table th:last-child,
+.advanced-table td:last-child {
+  border-right: none;
+}
+
+.advanced-table .stat-col {
+  width: 15%;
+  font-size: 0.8rem;
+}
+
+.advanced-table .before-col,
+.advanced-table .after-col {
+  width: 24%;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.advanced-table .change-col {
+  width: 20%;
+}
+
+.advanced-table .overshoot-col {
+  width: 9%;
+  font-size: 0.8rem;
 }
 
 ul {
