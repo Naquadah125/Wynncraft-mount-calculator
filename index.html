@@ -4,6 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mount Material Optimizer</title>
+  <meta name="description" content="Optimize your Wynncraft mount materials. Plan feeding routes, analyze stat gains, and find the best materials for training.">
+  
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Mount Material Optimizer">
+  <meta property="og:description" content="Optimize your Wynncraft mount materials. Plan feeding routes, analyze stat gains, and find the best materials for training.">
+  <meta property="og:image" content="https://raw.githubusercontent.com/naquadah125/mount-optimizer/main/og-image.png">
+  
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:title" content="Mount Material Optimizer">
+  <meta property="twitter:description" content="Optimize your Wynncraft mount materials. Plan feeding routes, analyze stat gains, and find the best materials for training.">
+  <meta property="twitter:image" content="https://raw.githubusercontent.com/naquadah125/mount-optimizer/main/og-image.png">
+  
   <script src="https://unpkg.com/javascript-lp-solver/prod/solver.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -707,20 +719,6 @@
         rowsHtml += `<tr><td class="stat-col">${stat}</td><td class="before-col">${beforeDisplay}/${maxValue}</td><td class="after-col">${afterDisplay}/${maxValue}</td><td class="change-col">${deltaText}</td><td class="overshoot-col">${overshootText}</td></tr>`;
       });
 
-      const overshootWarnings = [];
-      stats.forEach((stat) => {
-        const afterValue = Number(after.limits[stat] || 0);
-        const maxValue = Number(advancedState.maxValues[stat] || 0);
-        const overshoot = afterValue - maxValue;
-        if (overshoot > 0) {
-          overshootWarnings.push(`${stat} limit passes max by: ${overshoot} (${maxValue} < ${afterValue})`);
-        }
-      });
-
-      advancedWarnings.innerHTML = overshootWarnings.length > 0
-        ? `<p class="note">${overshootWarnings.join("<br>")}</p>`
-        : "";
-
       advancedDiff.innerHTML = `
         <table class="advanced-table">
           <thead>
@@ -838,9 +836,9 @@
               <thead>
                 <tr>
                   <th>Material</th>
-                  <th>Raises</th>
-                  <th>Feeds to buy</th>
-                  <th>Total pts added</th>
+                  <th>Stats given</th>
+                  <th>Material Quantity</th>
+                  <th>Total</th>
                 </tr>
               </thead>
               <tbody>${rowsHTML}</tbody>
@@ -989,5 +987,9 @@
       renderAdvancedStage();
     });
   </script>
+
+  <footer class="footer">
+    <p>If a problem persists, contact me on Discord: <strong>naquadah125</strong></p>
+  </footer>
 </body>
 </html>
