@@ -22,8 +22,8 @@
         <label class="control algo-control" for="algoModeSelect">
           <span>Algorithm</span>
           <select id="algoModeSelect" class="algo-select">
-            <option value="best-safe-90" selected>Optimal for BREED</option>
-            <option value="optimal-max">Optimal for MAX</option>
+            <option value="best-safe-90" selected>Optimize for BREEDING</option>
+            <option value="optimal-max">Optimize for MAXIMUM</option>
           </select>
         </label>
         <button class="action" id="calcButton" type="button">Calculate Optimal Materials</button>
@@ -56,6 +56,7 @@
             <span id="advancedStageLabel">Stage 0 / 0</span>
           </div>
           <div class="advanced-meta" id="advancedMeta">Run calculate to view stage-by-stage changes.</div>
+          <div class="advanced-warnings" id="advancedWarnings"></div>
           <div class="advanced-diff" id="advancedDiff"></div>
         </div>
       </section>
@@ -67,6 +68,37 @@
       <button class="nbt-close" id="nbtCloseButton" type="button" aria-label="Close">X</button>
       <h3 class="nbt-title" id="nbtModalTitle">NBT Scan</h3>
       <p class="nbt-help">Paste NBT content below. The scanner will fill Current, Limit, and Max for the 8 stats.</p>
+      <details class="nbt-howto">
+        <summary>How to use</summary>
+        <div class="nbt-howto-body">
+          <ol>
+            <li>Install <a href="https://modrinth.com/mod/ankinbt/versions" target="_blank" rel="noopener noreferrer">AnkiNBT</a> to your modpack.</li>
+            <li>
+              Go to the Feeding Menu.
+              <details class="howto-ref-toggle">
+                <summary>[reference pic]</summary>
+                <img class="howto-ref-image" src="img/guide/pic_1_guide.png" alt="Feeding menu reference" loading="lazy">
+              </details>
+            </li>
+            <li>Press "N" on the Mounts.</li>
+            <li>
+              Go to Misc &gt; Copy NBT.
+              <details class="howto-ref-toggle">
+                <summary>[reference pic]</summary>
+                <img class="howto-ref-image" src="img/guide/pic_2_guide.png" alt="AnkiNBT Misc tab reference" loading="lazy">
+              </details>
+            </li>
+            <li>
+              Paste the NBT into the box below.
+              <details class="howto-ref-toggle">
+                <summary>[reference pic]</summary>
+                <img class="howto-ref-image" src="img/guide/pic_3_guide.png" alt="NBT scan input reference" loading="lazy">
+              </details>
+            </li>
+            <li>Press Submit and all the stats will be inputted.</li>
+          </ol>
+        </div>
+      </details>
       <textarea id="nbtInput" class="nbt-textarea" spellcheck="false" placeholder="Paste NBT data here..."></textarea>
       <div class="nbt-actions">
         <button class="nbt-submit" id="nbtSubmitButton" type="button">Submit</button>
@@ -119,6 +151,7 @@
     const advancedStageSlider = document.getElementById("advancedStageSlider");
     const advancedStageLabel = document.getElementById("advancedStageLabel");
     const advancedMeta = document.getElementById("advancedMeta");
+    const advancedWarnings = document.getElementById("advancedWarnings");
     const advancedDiff = document.getElementById("advancedDiff");
     const algorithms = window.createMountAlgorithms(stats);
     let pendingParsedResult = null;
@@ -129,7 +162,7 @@
     stats.forEach((stat) => {
       const row = tbody.insertRow();
       row.innerHTML = `
-        <td>${stat}</td>
+        <td id="label_${stat}">${stat}</td>
         <td><input type="number" id="current_${stat}" value="1" min="0"></td>
         <td><input type="number" id="limit_${stat}" value="10" min="0"></td>
         <td><input type="number" id="max_${stat}" value="30" min="0"></td>
@@ -347,6 +380,11 @@
     function applyNbtValues(parsedStats, options = {}) {
       let updated = 0;
       const useDefaultMaxForMissing = options.useDefaultMaxForMissing === true;
+      const altitudeLabel = document.getElementById("label_Altitude");
+
+      if (altitudeLabel) {
+        altitudeLabel.textContent = "Altitude";
+      }
 
       stats.forEach((stat) => {
         const values = parsedStats[stat];
@@ -361,6 +399,11 @@
         if (Number.isFinite(values.max) && !(values.inferredMax && useDefaultMaxForMissing)) {
           maxInput.value = values.max;
         }
+
+        if (stat === "Altitude" && altitudeLabel) {
+          altitudeLabel.textContent = values.sourceLabel === "Jump Height" ? "Jump Height" : "Altitude";
+        }
+
         updated += 1;
       });
 
@@ -374,28 +417,53 @@
         .replace(/\\\"/g, "\"")
         .replace(/\r?\n/g, " ");
 
-      function parseWindowRow(windowText) {
-        const currentMatch = windowText.match(/text:"(\d{1,3})"/);
+      function parseRowForAlias(sourceText, alias) {
+        const escapedAlias = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const directRegex = new RegExp(
+          `text:"${escapedAlias}"[\\s\\S]{0,260}?text:"(\\d{1,3})"[\\s\\S]{0,200}?text:"\\/(\\d{1,3})(?:\\/(\\d{1,3}))?"`
+        );
+
+        const directMatch = sourceText.match(directRegex);
+        if (directMatch) {
+          const limitValue = Number.parseInt(directMatch[2], 10);
+          const hasMax = !!directMatch[3];
+          return {
+            current: Number.parseInt(directMatch[1], 10),
+            limit: limitValue,
+            max: hasMax ? Number.parseInt(directMatch[3], 10) : limitValue,
+            inferredMax: !hasMax,
+            sourceLabel: alias
+          };
+        }
+
+        const marker = `text:"${alias}"`;
+        const idx = sourceText.indexOf(marker);
+        if (idx === -1) return null;
+
+        const window = sourceText.slice(idx, idx + 1200);
+        const currentMatch = window.match(/text:"(\d{1,3})"/);
         if (!currentMatch) return null;
 
-        const tripletMatch = windowText.match(/text:"\/(\d{1,3})\/(\d{1,3})"/);
+        const tripletMatch = window.match(/text:"\/(\d{1,3})\/(\d{1,3})"/);
         if (tripletMatch) {
           return {
             current: Number.parseInt(currentMatch[1], 10),
             limit: Number.parseInt(tripletMatch[1], 10),
             max: Number.parseInt(tripletMatch[2], 10),
-            inferredMax: false
+            inferredMax: false,
+            sourceLabel: alias
           };
         }
 
-        const pairMatch = windowText.match(/text:"\/(\d{1,3})"/);
+        const pairMatch = window.match(/text:"\/(\d{1,3})"/);
         if (pairMatch) {
           const limitOnly = Number.parseInt(pairMatch[1], 10);
           return {
             current: Number.parseInt(currentMatch[1], 10),
             limit: limitOnly,
             max: limitOnly,
-            inferredMax: true
+            inferredMax: true,
+            sourceLabel: alias
           };
         }
 
@@ -404,12 +472,17 @@
 
       // Pass 1: parse by stat-local window (most reliable for long NBT strings).
       stats.forEach((stat) => {
-        const marker = `text:"${stat}"`;
-        const idx = text.indexOf(marker);
-        if (idx === -1) return;
+        const aliases = stat === "Altitude"
+          ? ["Altitude", "Jump Height"]
+          : [stat];
 
-        const window = text.slice(idx, idx + 1200);
-        const row = parseWindowRow(window);
+        let row = null;
+
+        aliases.some((alias) => {
+          row = parseRowForAlias(text, alias);
+          return !!row;
+        });
+
         if (!row) return;
 
         parsed[stat] = row;
@@ -589,6 +662,7 @@
         advancedStageSlider.disabled = true;
         advancedStageLabel.textContent = "Stage 0 / 0";
         advancedMeta.textContent = "Run calculate to view stage-by-stage changes.";
+        advancedWarnings.innerHTML = "";
         advancedDiff.innerHTML = "";
         return;
       }
@@ -632,6 +706,20 @@
         const overshootText = overshoot > 0 ? `+${overshoot}` : "0";
         rowsHtml += `<tr><td class="stat-col">${stat}</td><td class="before-col">${beforeDisplay}/${maxValue}</td><td class="after-col">${afterDisplay}/${maxValue}</td><td class="change-col">${deltaText}</td><td class="overshoot-col">${overshootText}</td></tr>`;
       });
+
+      const overshootWarnings = [];
+      stats.forEach((stat) => {
+        const afterValue = Number(after.limits[stat] || 0);
+        const maxValue = Number(advancedState.maxValues[stat] || 0);
+        const overshoot = afterValue - maxValue;
+        if (overshoot > 0) {
+          overshootWarnings.push(`${stat} limit passes max by: ${overshoot} (${maxValue} < ${afterValue})`);
+        }
+      });
+
+      advancedWarnings.innerHTML = overshootWarnings.length > 0
+        ? `<p class="note">${overshootWarnings.join("<br>")}</p>`
+        : "";
 
       advancedDiff.innerHTML = `
         <table class="advanced-table">
@@ -698,38 +786,67 @@
 
       const algoMode = algoModeSelect.value;
       const result = calculateFeedForTier(limitValues, maxValues, activeMaterials, algoMode, activeTier);
-      const algorithmLabel = algoMode === "best-safe-90"
-        ? "Optimal to breed"
-        : (algoMode === "best-safe-100"
-          ? "Optimal to breed"
-          : "Optimal to MAX");
-
-      let outputHTML = `<p><strong>Using Tier ${activeTier} materials</strong></p><p><strong>Algorithm:</strong> ${algorithmLabel}</p>`;
+      let outputHTML = `<p><strong>Using Tier ${activeTier} materials</strong></p>`;
 
       advancedState = null;
       renderAdvancedStage();
 
       if (result && result.feasible) {
         let totalItems = 0;
-        const gainedByStat = Object.fromEntries(stats.map((stat) => [stat, 0]));
         const itemCounts = extractItemCounts(result, activeMaterials);
-        outputHTML += "<ul>";
+        let rowsHTML = "";
+
+        const formatRaises = (materialStats) => {
+          return stats
+            .map((stat) => {
+              const value = Number(materialStats[stat] || 0);
+              if (!value) return "";
+              return `${stat} (+${value})`;
+            })
+            .filter(Boolean)
+            .join(", ");
+        };
 
         Object.keys(activeMaterials).forEach((mat) => {
           const qty = itemCounts[mat] || 0;
           if (qty && qty > 0) {
             const imageFile = materialToImageFile(mat);
-            outputHTML += `<li class="material-row"><img class="material-icon" src="img/mats/${imageFile}" alt="${mat}" onerror="this.style.display='none'">${qty}x ${mat}</li>`;
-            totalItems += qty;
+            const raisesText = formatRaises(activeMaterials[mat]);
+            const pointsPerFeed = stats.reduce((sum, stat) => sum + Number(activeMaterials[mat][stat] || 0), 0);
+            const totalPointsAdded = pointsPerFeed * qty;
 
-            stats.forEach((stat) => {
-              const value = activeMaterials[mat][stat] || 0;
-              gainedByStat[stat] += value * qty;
-            });
+            rowsHTML += `
+              <tr>
+                <td class="material-cell">
+                  <span class="material-row">
+                    <img class="material-icon" src="img/mats/${imageFile}" alt="${mat}" onerror="this.style.display='none'">
+                    <span class="material-name">${mat}</span>
+                  </span>
+                </td>
+                <td>${raisesText}</td>
+                <td class="numeric-cell">${qty}</td>
+                <td class="numeric-cell">${totalPointsAdded}</td>
+              </tr>
+            `;
+            totalItems += qty;
           }
         });
 
-        outputHTML += "</ul>";
+        outputHTML += `
+          <div class="result-table-wrap">
+            <table class="result-table">
+              <thead>
+                <tr>
+                  <th>Material</th>
+                  <th>Raises</th>
+                  <th>Feeds to buy</th>
+                  <th>Total pts added</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHTML}</tbody>
+            </table>
+          </div>
+        `;
         const currentTierTotalItems = Number.isFinite(result.totalItems) ? result.totalItems : totalItems;
         outputHTML += `<p><strong>Total materials needed: ${currentTierTotalItems}</strong></p>`;
 
@@ -784,18 +901,6 @@
           }
         }
 
-        const overshootWarnings = [];
-        stats.forEach((stat) => {
-          const finalValue = limitValues[stat] + gainedByStat[stat];
-          const overshoot = finalValue - maxValues[stat];
-          if (overshoot > 0) {
-            overshootWarnings.push(`${stat} limit passes max by: ${overshoot} (${maxValues[stat]} < ${maxValues[stat] + overshoot})`);
-          }
-        });
-
-        if (overshootWarnings.length > 0) {
-          outputHTML += `<p class="note">${overshootWarnings.join("<br>")}</p>`;
-        }
       } else {
         outputHTML += `Selected algorithm could not find a useful combination in this tier. ${result && result.reason ? result.reason : ""}`;
         advancedState = null;
