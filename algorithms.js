@@ -110,7 +110,7 @@
         return true;
       }
 
-      const maxDepth = 15;
+      const maxDepth = 99;
 
       for (let depth = 1; depth <= maxDepth; depth += 1) {
         let bestCounts = null;

@@ -1,0 +1,142 @@
+{
+  "1": {
+    "Copper Ingot": { "Energy": 4, "Toughness": 8, "cost": 1 },
+    "Copper Gem": { "Speed": 4, "Energy": 2, "Training": 6, "cost": 1 },
+    "Oak Wood": { "Speed": 2, "Acceleration": 6, "Toughness": 4, "cost": 1 },
+    "Oak Paper": { "Altitude": 8, "Boost": 4, "cost": 1 },
+    "Wheat String": { "Acceleration": 2, "Handling": 4, "Boost": 6, "cost": 1 },
+    "Wheat Grains": { "Speed": 8, "Altitude": 4, "cost": 1 },
+    "Gudgeon Oil": { "Altitude": 2, "Handling": 6, "Training": 4, "cost": 1 },
+    "Gudgeon Meat": { "Acceleration": 4, "Energy": 8, "cost": 1 }
+  },
+  "2": {
+    "Granite Ingot": { "Energy": 5, "Toughness": 10, "cost": 1 },
+    "Granite Gem": { "Speed": 5, "Energy": 2, "Training": 8, "cost": 1 },
+    "Birch Wood": { "Speed": 2, "Acceleration": 8, "Toughness": 5, "cost": 1 },
+    "Birch Paper": { "Altitude": 10, "Boost": 5, "cost": 1 },
+    "Barley String": { "Acceleration": 2, "Handling": 5, "Boost": 8, "cost": 1 },
+    "Barley Grains": { "Speed": 10, "Altitude": 5, "cost": 1 },
+    "Trout Oil": { "Altitude": 2, "Handling": 8, "Training": 5, "cost": 1 },
+    "Trout Meat": { "Acceleration": 5, "Energy": 10, "cost": 1 }
+  },
+  "3": {
+    "Gold Ingot": { "Energy": 5, "Toughness": 12, "cost": 1 },
+    "Gold Gem": { "Speed": 6, "Energy": 3, "Training": 9, "cost": 1 },
+    "Willow Wood": { "Speed": 3, "Acceleration": 9, "Toughness": 6, "cost": 1 },
+    "Willow Paper": { "Altitude": 12, "Boost": 5, "cost": 1 },
+    "Oat String": { "Acceleration": 3, "Handling": 6, "Boost": 9, "cost": 1 },
+    "Oat Grains": { "Speed": 12, "Altitude": 5, "cost": 1 },
+    "Salmon Oil": { "Altitude": 3, "Handling": 9, "Training": 6, "cost": 1 },
+    "Salmon Meat": { "Acceleration": 5, "Energy": 12, "cost": 1 }
+  },
+  "4": {
+    "Sandstone Ingot": { "Energy": 6, "Toughness": 14, "cost": 1 },
+    "Sandstone Gem": { "Speed": 6, "Energy": 3, "Training": 11, "cost": 1 },
+    "Acacia Wood": { "Speed": 3, "Acceleration": 11, "Toughness": 6, "cost": 1 },
+    "Acacia Paper": { "Altitude": 14, "Boost": 6, "cost": 1 },
+    "Malt String": { "Acceleration": 3, "Handling": 6, "Boost": 11, "cost": 1 },
+    "Malt Grains": { "Speed": 14, "Altitude": 6, "cost": 1 },
+    "Carp Oil": { "Altitude": 3, "Handling": 11, "Training": 6, "cost": 1 },
+    "Carp Meat": { "Acceleration": 6, "Energy": 14, "cost": 1 }
+  },
+  "5": {
+    "Iron Ingot": { "Energy": 6, "Toughness": 16, "cost": 1 },
+    "Iron Gem": { "Speed": 7, "Energy": 3, "Training": 12, "cost": 1 },
+    "Spruce Wood": { "Speed": 3, "Acceleration": 12, "Toughness": 7, "cost": 1 },
+    "Spruce Paper": { "Altitude": 16, "Boost": 6, "cost": 1 },
+    "Hops String": { "Acceleration": 3, "Handling": 7, "Boost": 12, "cost": 1 },
+    "Hops Grains": { "Speed": 16, "Altitude": 6, "cost": 1 },
+    "Icefish Oil": { "Altitude": 3, "Handling": 12, "Training": 7, "cost": 1 },
+    "Icefish Meat": { "Acceleration": 6, "Energy": 16, "cost": 1 }
+  },
+  "6": {
+    "Silver Ingot": { "Energy": 7, "Toughness": 18, "cost": 1 },
+    "Silver Gem": { "Speed": 8, "Energy": 4, "Training": 14, "cost": 1 },
+    "Jungle Wood": { "Speed": 4, "Acceleration": 14, "Toughness": 8, "cost": 1 },
+    "Jungle Paper": { "Altitude": 18, "Boost": 7, "cost": 1 },
+    "Rye String": { "Acceleration": 4, "Handling": 8, "Boost": 14, "cost": 1 },
+    "Rye Grains": { "Speed": 18, "Altitude": 7, "cost": 1 },
+    "Piranha Oil": { "Altitude": 4, "Handling": 14, "Training": 8, "cost": 1 },
+    "Piranha Meat": { "Acceleration": 7, "Energy": 18, "cost": 1 }
+  },
+  "7": {
+    "Cobalt Ingot": { "Energy": 8, "Toughness": 20, "cost": 1 },
+    "Cobalt Gem": { "Speed": 9, "Energy": 4, "Training": 15, "cost": 1 },
+    "Dark Wood": { "Speed": 4, "Acceleration": 15, "Toughness": 9, "cost": 1 },
+    "Dark Paper": { "Altitude": 20, "Boost": 8, "cost": 1 },
+    "Millet String": { "Acceleration": 4, "Handling": 9, "Boost": 15, "cost": 1 },
+    "Millet Grains": { "Speed": 20, "Altitude": 8, "cost": 1 },
+    "Koi Oil": { "Altitude": 4, "Handling": 15, "Training": 9, "cost": 1 },
+    "Koi Meat": { "Acceleration": 8, "Energy": 20, "cost": 1 }
+  },
+  "8": {
+    "Kanderstone Ingot": { "Energy": 8, "Toughness": 22, "cost": 1 },
+    "Kanderstone Gem": { "Speed": 10, "Energy": 4, "Training": 17, "cost": 1 },
+    "Light Wood": { "Speed": 4, "Acceleration": 17, "Toughness": 10, "cost": 1 },
+    "Light Paper": { "Altitude": 22, "Boost": 8, "cost": 1 },
+    "Decay String": { "Acceleration": 4, "Handling": 10, "Boost": 17, "cost": 1 },
+    "Decay Grains": { "Speed": 22, "Altitude": 8, "cost": 1 },
+    "Gylia Oil": { "Altitude": 4, "Handling": 17, "Training": 10, "cost": 1 },
+    "Gylia Meat": { "Acceleration": 8, "Energy": 22, "cost": 1 }
+  },
+  "9": {
+    "Diamond Ingot": { "Energy": 9, "Toughness": 24, "cost": 1 },
+    "Diamond Gem": { "Speed": 10, "Energy": 4, "Training": 18, "cost": 1 },
+    "Pine Wood": { "Speed": 4, "Acceleration": 18, "Toughness": 10, "cost": 1 },
+    "Pine Paper": { "Altitude": 24, "Boost": 9, "cost": 1 },
+    "Rice String": { "Acceleration": 4, "Handling": 10, "Boost": 18, "cost": 1 },
+    "Rice Grains": { "Speed": 24, "Altitude": 9, "cost": 1 },
+    "Bass Oil": { "Altitude": 4, "Handling": 18, "Training": 10, "cost": 1 },
+    "Bass Meat": { "Acceleration": 9, "Energy": 24, "cost": 1 }
+  },
+  "10": {
+    "Molten Ingot": { "Energy": 9, "Toughness": 26, "cost": 1 },
+    "Molten Gem": { "Speed": 11, "Energy": 5, "Training": 20, "cost": 1 },
+    "Avo Wood": { "Speed": 5, "Acceleration": 20, "Toughness": 11, "cost": 1 },
+    "Avo Paper": { "Altitude": 26, "Boost": 9, "cost": 1 },
+    "Sorghum String": { "Acceleration": 5, "Handling": 11, "Boost": 20, "cost": 1 },
+    "Sorghum Grains": { "Speed": 26, "Altitude": 9, "cost": 1 },
+    "Molten Oil": { "Altitude": 5, "Handling": 20, "Training": 11, "cost": 1 },
+    "Molten Meat": { "Acceleration": 9, "Energy": 26, "cost": 1 }
+  },
+  "11": {
+    "Voidstone Ingot": { "Energy": 10, "Toughness": 28, "cost": 1 },
+    "Voidstone Gem": { "Speed": 12, "Energy": 5, "Training": 21, "cost": 1 },
+    "Sky Wood": { "Speed": 5, "Acceleration": 21, "Toughness": 12, "cost": 1 },
+    "Sky Paper": { "Altitude": 28, "Boost": 10, "cost": 1 },
+    "Hemp String": { "Acceleration": 5, "Handling": 12, "Boost": 21, "cost": 1 },
+    "Hemp Grains": { "Speed": 28, "Altitude": 10, "cost": 1 },
+    "Starfish Oil": { "Altitude": 5, "Handling": 21, "Training": 12, "cost": 1 },
+    "Starfish Meat": { "Acceleration": 10, "Energy": 28, "cost": 1 }
+  },
+  "12": {
+    "Dernic Ingot": { "Energy": 10, "Toughness": 29, "cost": 1 },
+    "Dernic Gem": { "Speed": 12, "Energy": 5, "Training": 22, "cost": 1 },
+    "Dernic Wood": { "Speed": 5, "Acceleration": 22, "Toughness": 12, "cost": 1 },
+    "Dernic Paper": { "Altitude": 29, "Boost": 10, "cost": 1 },
+    "Dernic String": { "Acceleration": 5, "Handling": 12, "Boost": 22, "cost": 1 },
+    "Dernic Grains": { "Speed": 29, "Altitude": 10, "cost": 1 },
+    "Dernic Oil": { "Altitude": 5, "Handling": 22, "Training": 12, "cost": 1 },
+    "Dernic Meat": { "Acceleration": 10, "Energy": 29, "cost": 1 }
+  },
+  "13": {
+    "Titanium Ingot": { "Energy": 11, "Toughness": 30, "cost": 1 },
+    "Titanium Gem": { "Speed": 13, "Energy": 5, "Training": 23, "cost": 1 },
+    "Maple Wood": { "Speed": 5, "Acceleration": 23, "Toughness": 13, "cost": 1 },
+    "Maple Paper": { "Altitude": 30, "Boost": 11, "cost": 1 },
+    "Jute String": { "Acceleration": 5, "Handling": 13, "Boost": 23, "cost": 1 },
+    "Jute Grains": { "Speed": 30, "Altitude": 11, "cost": 1 },
+    "Sturgeon Oil": { "Altitude": 5, "Handling": 23, "Training": 13, "cost": 1 },
+    "Sturgeon Meat": { "Acceleration": 11, "Energy": 30, "cost": 1 }
+  },
+  "14": {
+    "Cinnabar Ingot": { "Energy": 11, "Toughness": 31, "cost": 1 },
+    "Cinnabar Gem": { "Speed": 13, "Energy": 5, "Training": 23, "cost": 1 },
+    "Redwood Wood": { "Speed": 5, "Acceleration": 23, "Toughness": 13, "cost": 1 },
+    "Redwood Paper": { "Altitude": 31, "Boost": 11, "cost": 1 },
+    "Heather String": { "Acceleration": 5, "Handling": 13, "Boost": 23, "cost": 1 },
+    "Heather Grains": { "Speed": 31, "Altitude": 11, "cost": 1 },
+    "Mahseer Oil": { "Altitude": 5, "Handling": 23, "Training": 13, "cost": 1 },
+    "Mahseer Meat": { "Acceleration": 11, "Energy": 31, "cost": 1 }
+  }
+}
