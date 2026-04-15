@@ -162,6 +162,18 @@ function parseNbtStats(nbtText) {
     const currentMatch = scopeWindow.match(/text:"(\d{1,3})"/);
     if (!currentMatch) return null;
 
+    // New format: current then parenthesized max, then /limit (e.g. 74 (117) /105).
+    const maxBeforeLimitMatch = scopeWindow.match(/text:"\((\d{1,3})\)"[\s\S]{0,120}?text:"\/(\d{1,3})\s*"/);
+    if (maxBeforeLimitMatch) {
+      return {
+        current: Number.parseInt(currentMatch[1], 10),
+        limit: Number.parseInt(maxBeforeLimitMatch[2], 10),
+        max: Number.parseInt(maxBeforeLimitMatch[1], 10),
+        inferredMax: false,
+        sourceLabel: alias
+      };
+    }
+
     const tripletMatch = scopeWindow.match(/text:"\/(\d{1,3})\/(\d{1,3})\s*"/);
     if (tripletMatch) {
       return {
@@ -209,16 +221,18 @@ function parseNbtStats(nbtText) {
   });
 
   const rows = [];
-  const rowRegex = /text:"(\d{1,3})"[\s\S]{0,140}?text:"\/(\d{1,3})(?:\/(\d{1,3}))?\s*"/g;
+  const rowRegex = /text:"(\d{1,3})"[\s\S]{0,140}?(?:text:"\((\d{1,3})\)"[\s\S]{0,120}?)?text:"\/(\d{1,3})(?:\/(\d{1,3}))?\s*"/g;
   let rowMatch;
   while ((rowMatch = rowRegex.exec(text)) !== null) {
-    const limitValue = Number.parseInt(rowMatch[2], 10);
-    const maxValue = rowMatch[3] ? Number.parseInt(rowMatch[3], 10) : limitValue;
+    const parenthesizedMax = rowMatch[2] ? Number.parseInt(rowMatch[2], 10) : null;
+    const limitValue = Number.parseInt(rowMatch[3], 10);
+    const slashMax = rowMatch[4] ? Number.parseInt(rowMatch[4], 10) : null;
+    const maxValue = parenthesizedMax ?? slashMax ?? limitValue;
     rows.push({
       current: Number.parseInt(rowMatch[1], 10),
       limit: limitValue,
       max: maxValue,
-      inferredMax: !rowMatch[3]
+      inferredMax: !parenthesizedMax && !slashMax
     });
   }
 
