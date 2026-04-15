@@ -1,6 +1,6 @@
 (function () {
   function createWithTrainingPlanner(deps) {
-    const { STATS, offTrainingPlanner, tierMinLevel } = deps;
+    const { STATS, offTrainingPlanner, tierMinLevel, getTierDisplayName } = deps;
 
     function cloneValues(values) {
       return { ...(values || {}) };
@@ -67,13 +67,21 @@
 
     function buildCacheKey(input) {
       return [
-        "with-training-v13",
+        "with-training-v14",
         input.algoMode,
         JSON.stringify(input.currentValues || {}),
         JSON.stringify(input.limitValues || {}),
         JSON.stringify(input.maxValues || {}),
         Object.keys(input.materialTiers || {}).join(",")
       ].join("|");
+    }
+
+    function getUnlockableStats(currentValues, maxValues, threshold) {
+      return STATS.filter((stat) => {
+        const current = Number(currentValues[stat] || 0);
+        const max = Number(maxValues[stat] || 0);
+        return current >= threshold || max >= threshold;
+      });
     }
 
     function getUnlockAlgoMode() {
@@ -205,14 +213,14 @@
         if (!nextMaterials) break;
 
         const threshold = tierMinLevel(nextTier);
-        const eligibleStats = STATS.filter((stat) => Number(maxValues[stat] || 0) >= threshold);
+        const eligibleStats = getUnlockableStats(currentValues, maxValues, threshold);
         if (eligibleStats.length === 0) break;
 
         const alreadyUnlockedStat = eligibleStats.find((stat) => Number(currentValues[stat] || 0) >= threshold);
         if (alreadyUnlockedStat) {
           steps.push({
             type: "Unlock",
-            text: `Unlock Tier ${nextTier}.`
+            text: `Unlock ${getTierDisplayName(nextTier)}.`
           });
           stateCache.push({
             step: stateCache.length + 1,
@@ -276,7 +284,7 @@
 
         if (itemCountTotal > 0) {
           steps.push(createEatStep(
-            `Use Tier ${currentTier} materials to raise ${best.stat} to ${threshold} for Tier ${nextTier}.`,
+            `Use ${getTierDisplayName(currentTier)} materials to raise ${best.stat} limit to ${threshold} for ${getTierDisplayName(nextTier)}.`,
             best.result.itemCounts,
             activeMaterials
           ));
@@ -309,7 +317,7 @@
 
         steps.push({
           type: "Unlock",
-          text: `Unlock Tier ${nextTier}.`
+          text: `Unlock ${getTierDisplayName(nextTier)}.`
         });
         stateCache.push({
           step: stateCache.length + 1,
@@ -405,7 +413,7 @@
           }
 
           const threshold = tierMinLevel(nextTier);
-          const eligibleStats = STATS.filter((stat) => Number(maxValues[stat] || 0) >= threshold);
+          const eligibleStats = getUnlockableStats(route.currentValues, maxValues, threshold);
           if (eligibleStats.length === 0) {
             terminals.push(route);
             return;
@@ -466,12 +474,12 @@
 
             if (itemCountTotal > 0) {
               nextSteps.push(createEatStep(
-                `Use Tier ${currentTier} materials to raise ${candidate.stat} to ${threshold} for Tier ${nextTier}.`,
+                `Use ${getTierDisplayName(currentTier)} materials to raise ${candidate.stat} limit to ${threshold} for ${getTierDisplayName(nextTier)}.`,
                 candidate.result.itemCounts,
                 activeMaterials
               ));
             }
-            nextSteps.push({ type: "Unlock", text: `Unlock Tier ${nextTier}.` });
+            nextSteps.push({ type: "Unlock", text: `Unlock ${getTierDisplayName(nextTier)}.` });
 
             const nextStateCache = [...route.stateCache, {
               step: route.stateCache.length + 1,
@@ -528,7 +536,7 @@
         return {
           feasible: false,
           mode: "with-training",
-          reason: `Material data for Tier ${finalTier} is missing.`,
+          reason: `Material data for ${getTierDisplayName(finalTier)} is missing.`,
           steps: unlockRoute.steps,
           stateCache: unlockRoute.stateCache,
           totalMaterialsUsed: unlockRoute.totalMaterialsUsed,
@@ -562,7 +570,7 @@
       const stage2ItemCount = Number(stage2.currentTierTotalItems || 0);
       const stage2Step = stage2ItemCount > 0
         ? createEatStep(
-          `Use Tier ${finalTier} materials.`,
+          `Use ${getTierDisplayName(finalTier)} materials.`,
           stage2.itemCounts,
           finalMaterials
         )
@@ -587,6 +595,49 @@
         finalTier,
         stage2StartValues: cloneValues(unlockRoute.currentValues),
         finalCurrentValues: unlockRoute.currentValues,
+        stage2
+      };
+    }
+
+    function buildDirectPlanResult(stage2, input, startValues, maxValues, materialTiers, startTier) {
+      const finalMaterials = materialTiers[startTier];
+      if (!finalMaterials) {
+        return {
+          feasible: false,
+          mode: "with-training",
+          reason: `Material data for ${getTierDisplayName(startTier)} is missing.`,
+          steps: [],
+          stateCache: [],
+          totalMaterialsUsed: 0,
+          totalFeedingMinutes: 0
+        };
+      }
+
+      const stage2ItemCount = Number(stage2.currentTierTotalItems || 0);
+      const stage2Step = stage2ItemCount > 0
+        ? createEatStep(
+          `Use ${getTierDisplayName(startTier)} materials.`,
+          stage2.itemCounts,
+          finalMaterials
+        )
+        : null;
+
+      const mergedSteps = stage2Step ? [stage2Step] : [];
+      const combinedAdvancedTimeline = buildAdvancedTimelineFromSteps(startValues, mergedSteps, maxValues);
+
+      return {
+        feasible: true,
+        mode: "with-training",
+        algoMode: input.algoMode,
+        steps: mergedSteps,
+        advancedTimeline: combinedAdvancedTimeline,
+        stateCache: [],
+        totalMaterialsUsed: stage2ItemCount,
+        totalFeedingMinutes: Number(stage2.feedingTime && stage2.feedingTime.totalMinutes) || 0,
+        overshootSummary: buildOvershootSummary(maxValues, combinedAdvancedTimeline),
+        finalTier: startTier,
+        stage2StartValues: cloneValues(startValues),
+        finalCurrentValues: cloneValues(startValues),
         stage2
       };
     }
@@ -686,6 +737,26 @@
       const startValues = cloneValues(input.limitValues || input.currentValues || {});
       const startTier = Number(input.activeTier || 1);
       const maxValues = cloneValues(input.maxValues || {});
+
+      const directTierMaterials = materialTiers[startTier];
+      if (directTierMaterials) {
+        const directTierPlan = offTrainingPlanner.plan({
+          limitValues: startValues,
+          maxValues,
+          activeTier: startTier,
+          activeMaterials: directTierMaterials,
+          algoMode: input.algoMode,
+          materialTiers,
+          highestLimit: Math.max(...Object.values(input.limitValues || startValues || {})),
+          highestCurrent: Math.max(...Object.values(input.currentValues || {}))
+        });
+
+        if (directTierPlan && directTierPlan.feasible) {
+          const directResult = buildDirectPlanResult(directTierPlan, input, startValues, maxValues, materialTiers, startTier);
+          writeCachedPlan(cacheKey, directResult);
+          return directResult;
+        }
+      }
 
       const greedyUnlockRoute = runUnlockStageGreedy(startValues, maxValues, startTier, materialTiers, input.algoMode);
       if (!greedyUnlockRoute.feasible) {

@@ -2,6 +2,7 @@
 const { ADVANCED_SLIDER_MAX, STATS } = window.APP_CONSTANTS;
 const {
   getTierSoftOvershoot,
+  getTierDisplayName,
   loadMaterialTiers,
   materialToImageFile,
   pickTier,
@@ -127,14 +128,17 @@ function applyNbtValues(parsedStats, options = {}) {
 function parseNbtStats(nbtText) {
   const parsed = {};
   const missingMaxStats = [];
-  const text = nbtText
+  const text = String(nbtText || "")
+    .replace(/,\s*"!minecraft:consumable"\s*:\s*\{\}/g, "")
+    .replace(/"!minecraft:consumable"\s*:\s*\{\}\s*,/g, "")
+    .replace(/"!minecraft:consumable"\s*:\s*\{\}/g, "")
     .replace(/\\\"/g, "\"")
     .replace(/\r?\n/g, " ");
 
   function parseRowForAlias(sourceText, alias) {
     const escapedAlias = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const directRegex = new RegExp(
-      `text:"${escapedAlias}"[\\s\\S]{0,260}?text:"(\\d{1,3})"[\\s\\S]{0,200}?text:"\\/(\\d{1,3})(?:\\/(\\d{1,3}))?"`
+      `text:"${escapedAlias}"[\\s\\S]{0,260}?text:"(\\d{1,3})"[\\s\\S]{0,200}?text:"\\/(\\d{1,3})(?:\\/(\\d{1,3}))?\\s*"`
     );
 
     const directMatch = sourceText.match(directRegex);
@@ -158,7 +162,7 @@ function parseNbtStats(nbtText) {
     const currentMatch = scopeWindow.match(/text:"(\d{1,3})"/);
     if (!currentMatch) return null;
 
-    const tripletMatch = scopeWindow.match(/text:"\/(\d{1,3})\/(\d{1,3})"/);
+    const tripletMatch = scopeWindow.match(/text:"\/(\d{1,3})\/(\d{1,3})\s*"/);
     if (tripletMatch) {
       return {
         current: Number.parseInt(currentMatch[1], 10),
@@ -169,7 +173,7 @@ function parseNbtStats(nbtText) {
       };
     }
 
-    const pairMatch = scopeWindow.match(/text:"\/(\d{1,3})"/);
+    const pairMatch = scopeWindow.match(/text:"\/(\d{1,3})\s*"/);
     if (pairMatch) {
       const limitOnly = Number.parseInt(pairMatch[1], 10);
       return {
@@ -205,7 +209,7 @@ function parseNbtStats(nbtText) {
   });
 
   const rows = [];
-  const rowRegex = /text:"(\d{1,3})"[\s\S]{0,140}?text:"\/(\d{1,3})(?:\/(\d{1,3}))?"/g;
+  const rowRegex = /text:"(\d{1,3})"[\s\S]{0,140}?text:"\/(\d{1,3})(?:\/(\d{1,3}))?\s*"/g;
   let rowMatch;
   while ((rowMatch = rowRegex.exec(text)) !== null) {
     const limitValue = Number.parseInt(rowMatch[2], 10);
@@ -375,9 +379,9 @@ function formatItemStatGains(itemStats) {
 function parseTrainingCardTitle(stepText) {
   if (!stepText) return "Train your mount";
 
-  const match = String(stepText).match(/raise\s+(.+?)\s+to\s+(\d+)\s+for\s+Tier\s+(\d+)/i);
+  const match = String(stepText).match(/raise\s+(.+?)\s+(?:limit\s+)?to\s+(\d+)\s+for\s+(Tier\s+\d+)/i);
   if (match) {
-    return `Train your mount's ${match[1]} to ${match[2]} for Tier ${match[3]}`;
+    return `Train your mount's ${match[1]} to ${match[2]} for ${match[3]}`;
   }
 
   return String(stepText).replace(/^Use\s+/i, "Train ").replace(/\.$/, "");
@@ -493,7 +497,7 @@ function renderOffModeGuide(offPlan, activeMaterials, activeTier) {
     : `<span class="training-feed-empty">No materials needed.</span>`;
 
   const tipText = offPlan && offPlan.tip
-    ? `Tip: train to level ${offPlan.tip.threshold} for fewer items.`
+    ? `Tip: train to level ${offPlan.tip.threshold} (${getTierDisplayName(offPlan.tip.tier)}) for fewer items.`
     : "";
 
   return `
@@ -501,7 +505,7 @@ function renderOffModeGuide(offPlan, activeMaterials, activeTier) {
       <div class="training-card-stage">
         <article class="training-card">
           <div class="training-card-head off-mode-head">
-            <h4 class="training-card-title">Using Tier ${activeTier} materials</h4>
+            <h4 class="training-card-title">Using ${getTierDisplayName(activeTier)} materials</h4>
             <span class="off-mode-tip">${tipText}</span>
           </div>
           <ol class="training-card-steps">
@@ -741,7 +745,7 @@ function calculate(options = {}) {
   }
 
   if (!withTraining && !activeMaterials) {
-    outputElement.innerHTML = `Material data for Tier ${activeTier} is missing.`;
+    outputElement.innerHTML = `Material data for ${getTierDisplayName(activeTier)} is missing.`;
     return;
   }
 
@@ -760,7 +764,7 @@ function calculate(options = {}) {
 
   const algoMode = algoModeSelect.value;
   const planner = getActiveTrainingPlanner();
-  let tierHeaderHTML = withTraining ? "" : `<p><strong>Using Tier ${activeTier} materials</strong></p>`;
+  let tierHeaderHTML = withTraining ? "" : `<p><strong>Using ${getTierDisplayName(activeTier)} materials</strong></p>`;
   let outputHTML = "";
   let trailingNoteHTML = "";
 
@@ -901,7 +905,7 @@ function calculate(options = {}) {
     renderAdvancedStage();
 
       if (offPlan.tip && !useModernOffUi) {
-        const tipHtml = `<p class="note tip-note">Tip: train to level ${offPlan.tip.threshold} (Tier ${offPlan.tip.tier}) for fewer items: ${offPlan.tip.totalItems} vs ${offPlan.tip.currentTierTotalItems}.</p>`;
+        const tipHtml = `<p class="note tip-note">Tip: train to level ${offPlan.tip.threshold} (${getTierDisplayName(offPlan.tip.tier)}) for fewer items: ${offPlan.tip.totalItems} vs ${offPlan.tip.currentTierTotalItems}.</p>`;
         tierHeaderHTML += tipHtml;
       }
     } else {
@@ -914,7 +918,7 @@ function calculate(options = {}) {
   outputHTML = tierHeaderHTML + outputHTML;
 
   if (highestCurrent > 115) {
-    notes.push("Current level is above 115. Tier 14 is used as fallback until higher-tier data is added.");
+    notes.push("Current level is above 115. Tier 115 is used as fallback until higher-tier data is added.");
   }
 
   if (notes.length > 0) {
@@ -977,12 +981,16 @@ function syncOffUiToggleState() {
     offUiToggleInput.disabled = true;
     if (offUiToggleWrap) {
       offUiToggleWrap.classList.add("is-locked");
+      offUiToggleWrap.setAttribute("aria-disabled", "true");
+      offUiToggleWrap.title = "Locked while Step-by-step training is on";
     }
     useModernOffUi = true;
   } else {
     offUiToggleInput.disabled = false;
     if (offUiToggleWrap) {
       offUiToggleWrap.classList.remove("is-locked");
+      offUiToggleWrap.setAttribute("aria-disabled", "false");
+      offUiToggleWrap.removeAttribute("title");
     }
   }
 }
@@ -1002,9 +1010,6 @@ function bindEvents() {
   nbtSubmitButton.addEventListener("click", submitNbtScan);
   trainingToggleInput.addEventListener("change", () => {
     withTraining = trainingToggleInput.checked === true;
-    if (offUiToggleWrap) {
-      offUiToggleWrap.hidden = withTraining;
-    }
     syncOffUiToggleState();
     resetCalculationResult();
   });
@@ -1108,12 +1113,10 @@ async function initialize() {
     STATS,
     offTrainingPlanner,
     pickTier,
-    tierMinLevel
+    tierMinLevel,
+    getTierDisplayName
   });
   withTraining = trainingToggleInput.checked === true;
-  if (offUiToggleWrap) {
-    offUiToggleWrap.hidden = withTraining;
-  }
   syncOffUiToggleState();
 
   buildStatRows();

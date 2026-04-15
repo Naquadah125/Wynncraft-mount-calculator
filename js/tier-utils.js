@@ -44,6 +44,11 @@ function getTierSoftOvershoot(tier) {
   return Math.max(3, tier + 2);
 }
 
+function getTierDisplayName(tier) {
+  const level = tierMinLevel(tier);
+  return level === 0 ? "Tier 1" : `Tier ${level}`;
+}
+
 async function loadMaterialTiers() {
   if (window.location.protocol === "file:") {
     if (window.MATERIAL_TIERS_FALLBACK) {
@@ -64,5 +69,6 @@ window.TierUtils = {
   tierMinLevel,
   materialToImageFile,
   getTierSoftOvershoot,
+  getTierDisplayName,
   loadMaterialTiers
 };

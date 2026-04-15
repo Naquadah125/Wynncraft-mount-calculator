@@ -16,7 +16,6 @@
   <meta property="twitter:description" content="Optimize your Wynncraft mount materials. Plan feeding routes, analyze stat gains, and find the best materials for training.">
   <meta property="twitter:image" content="https://raw.githubusercontent.com/naquadah125/mount-optimizer/main/og-image.png">
 
-  <script src="https://unpkg.com/javascript-lp-solver/prod/solver.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
@@ -40,7 +39,7 @@
         </label>
         <label class="control training-control" for="trainingToggleInput">
           <span>Step-by-step training:</span>
-          <input type="checkbox" id="trainingToggleInput" class="training-toggle-input">
+          <input type="checkbox" id="trainingToggleInput" class="training-toggle-input" checked>
           <span class="training-toggle-lever" aria-hidden="true"></span>
         </label>
         <button class="action" id="calcButton" type="button">Calculate Optimal Materials</button>

@@ -315,7 +315,8 @@ input[type="number"] {
 }
 
 .off-ui-toggle.is-locked .training-toggle-lever,
-.off-ui-toggle.is-locked .training-toggle-input {
+.off-ui-toggle.is-locked .training-toggle-input,
+.off-ui-toggle.is-locked * {
   cursor: not-allowed;
 }
 
